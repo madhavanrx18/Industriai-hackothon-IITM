@@ -57,7 +57,7 @@ An innovative, multi-layered solution designed to integrate seamlessly with exis
 5. **Secure Audit Logging**  
    All access events are logged using blockchain for immutable and transparent audit trails.
 ## Problems
-### Access controll
+### Access control
 Access control misconfigurations are a significant cybersecurity concern, often leading to unauthorized access and data breaches. In 2023, misconfigurations contributed to a 78% surge in data breaches compared to the previous year.  Additionally, cloud misconfigurations accounted for 15% of initial attack vectors in security breaches, ranking as the third most common cause.  These statistics highlight the critical need for organizations to implement robust access control measures and regularly audit their configurations to safeguard against potential threats.
 
 ![image](./images/stat.png)
