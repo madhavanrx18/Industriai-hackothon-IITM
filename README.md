@@ -10,12 +10,12 @@ institutions. The goal is to ensure robust data privacy, integrity, and complian
 dynamic cloud environment while enabling scalability and flexibility
 
 **Key Areas of Focus**:
--Data Security
--Compliance
--Threat Mitigation
--Resilience and Scalability
--Ease of Implementation
--Flexibility
+- Data Security
+- Compliance
+- Threat Mitigation
+- Resilience and Scalability
+- Ease of Implementation
+- Flexibility
 
 ## Working progress
 An UI has been created for First round . For backend, we will be training a model that determines whether a person is authenticated to access the file and authorize for any changes based on the file description .
