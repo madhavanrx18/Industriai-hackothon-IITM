@@ -1,279 +1,75 @@
 import csv
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
+from collections import defaultdict
 
-def generate_folder_description(path_components):
-    # Descriptions for root directories
-    root_descriptions = {
-        'cloud': 'Primary cloud storage for active documents',
-        'local': 'Local network storage for immediate access',
-        'network': 'Global network shared storage',
-        'backup': 'Long-term backup storage location',
-        'archive': 'Historical document archive storage'
-    }
-    
-    # Descriptions for departments
-    dept_descriptions = {
-        'finance': 'Financial department records and documents',
-        'hr': 'Human Resources department files',
-        'it': 'Information Technology department resources',
-        'operations': 'Business operations documentation',
-        'legal': 'Legal department documentation'
-    }
-    
-    # Descriptions for subdepartments
-    subdept_descriptions = {
-        # Finance subdepartments
-        'accounting': 'General accounting and bookkeeping records',
-        'payroll': 'Employee payroll processing and records',
-        'audit': 'Internal and external audit documents',
-        'tax': 'Tax documentation and filings',
-        'investments': 'Investment records and analysis',
-        
-        # HR subdepartments
-        'recruitment': 'Hiring and recruitment process documents',
-        'benefits': 'Employee benefits administration',
-        'training': 'Employee training materials and records',
-        'personnel': 'Employee personnel files and records',
-        'compliance': 'HR compliance and policy documents',
-        
-        # IT subdepartments
-        'infrastructure': 'IT infrastructure documentation',
-        'security': 'Security protocols and systems',
-        'development': 'Software development projects',
-        'support': 'IT support documentation',
-        'systems': 'System administration files',
-        
-        # Operations subdepartments
-        'transactions': 'Transaction processing records',
-        'customer_service': 'Customer service documentation',
-        'risk': 'Risk assessment and management',
-        'fraud': 'Fraud detection and prevention',
-        'reporting': 'Operational reports and analytics',
-        
-        # Legal subdepartments
-        'contracts': 'Legal contracts and agreements',
-        'regulations': 'Regulatory compliance documents',
-        'cases': 'Legal case files and documentation',
-        'policies': 'Legal policies and procedures',
-        'documentation': 'Legal documentation and records'
-    }
-    
-    # Descriptions for special folders
-    special_folder_descriptions = {
-        'version': 'Version control folder for document revisions',
-        'priority': 'Priority-based classification folder',
-        'team': 'Team-specific workspace',
-        'project': 'Project-specific documentation'
-    }
-    
-    # Build complete path description
-    path_desc = []
-    
-    for component in path_components:
-        if component.startswith('/'):
-            component = component[1:]
-            
-        # Root directory description
-        if component in root_descriptions:
-            path_desc.append(f"[{component}: {root_descriptions[component]}]")
-            
-        # Department description
-        elif component in dept_descriptions:
-            path_desc.append(f"[{component}: {dept_descriptions[component]}]")
-            
-        # Subdepartment description
-        elif component in subdept_descriptions:
-            path_desc.append(f"[{component}: {subdept_descriptions[component]}]")
-            
-        # Year folder
-        elif component.isdigit() and len(component) == 4:
-            path_desc.append(f"[Year {component}]")
-            
-        # Month folder
-        elif component.isdigit() and len(component) == 2:
-            path_desc.append(f"[Month {component}]")
-            
-        # Special folders (version, priority, team, project)
-        else:
-            for special_type in special_folder_descriptions:
-                if component.startswith(special_type):
-                    identifier = component.split('_')[1]
-                    path_desc.append(f"[{component}: {special_folder_descriptions[special_type]} #{identifier}]")
-                    break
-    
-    return ' → '.join(path_desc)
-
-def generate_file_description(department, file_name):
-    # [Previous generate_file_description function remains the same]
-    # Base descriptions for different file types
-    descriptions = {
-        'finance': {
-            'quarterly': 'Financial performance report containing P&L statements, balance sheets, and cash flow data',
-            'balance': 'Balance sheet with assets, liabilities, and equity breakdown',
-            'transactions': 'Record of daily financial transactions and adjustments',
-            'audit': 'Internal audit findings and compliance verification records',
-            'tax': 'Annual tax return documentation and supporting schedules'
-        },
-        'hr': {
-            'employee': 'Company policies, procedures, and employee guidelines',
-            'training': 'Employee training software with interactive modules',
-            'benefits': 'Employee benefits package details and enrollment information',
-            'staff': 'Encrypted database of employee records and history',
-            'payroll': 'Bi-weekly payroll processing batch file'
-        },
-        'it': {
-            'system': 'Critical system update package with security fixes',
-            'security': 'Microsoft security patch for vulnerability remediation',
-            'backup': 'Daily system backup archive with incremental changes',
-            'config': 'System configuration settings and parameters',
-            'api': 'API documentation with endpoints and usage examples'
-        },
-        'operations': {
-            'customer': 'Encrypted customer personal and account information',
-            'risk': 'Monthly risk assessment reports and metrics',
-            'daily': 'Daily transaction logs with processing status',
-            'fraud': 'Rule sets for fraud detection system',
-            'operations': 'Standard operating procedures and guidelines'
-        },
-        'legal': {
-            'contract': 'Standard contract templates with legal annotations',
-            'compliance': 'Regulatory compliance audit reports',
-            'case': 'Active legal case files and supporting documents',
-            'legal': 'Internal legal department guidelines and procedures',
-            'regulatory': 'Regulatory filing documents and submissions'
-        }
-    }
-    
-    file_lower = file_name.lower()
-    for key, desc in descriptions[department].items():
-        if key in file_lower:
-            if 'v' in file_name:
-                version = file_name.split('v')[1].split('.')[0]
-                desc += f" (Version {version})"
-            if any(year in file_name for year in ['2020', '2021', '2022', '2023', '2024']):
-                for year in ['2020', '2021', '2022', '2023', '2024']:
-                    if year in file_name:
-                        desc += f" - Year {year}"
-                        break
-            return desc
-            
-    return "General internal document with restricted access"
-
-def generate_complex_path():
-    # [Previous path generation code remains the same]
-    roots = ['/cloud', '/local', '/network', '/backup', '/archive']
-    
-    departments = {
-        'finance': ['accounting', 'payroll', 'audit', 'tax', 'investments'],
-        'hr': ['recruitment', 'benefits', 'training', 'personnel', 'compliance'],
-        'it': ['infrastructure', 'security', 'development', 'support', 'systems'],
-        'operations': ['transactions', 'customer_service', 'risk', 'fraud', 'reporting'],
-        'legal': ['contracts', 'regulations', 'cases', 'policies', 'documentation']
-    }
-    
-    file_types = {
-        'finance': [
-            'quarterly_report_Q{}_FY{}.xlsx'.format(random.randint(1,4), random.randint(2020,2024)),
-            'balance_sheet_{}.pdf'.format(datetime.now().strftime('%Y%m')),
-            'transactions_{}.csv'.format(random.randint(10000,99999)),
-            'audit_log_{}.txt'.format(datetime.now().strftime('%Y%m%d')),
-            'tax_return_{}.pdf'.format(random.randint(2020,2024))
-        ],
-        'hr': [
-            'employee_handbook_v{}.pdf'.format(random.randint(1,5)),
-            'training_module_{}.exe'.format(random.randint(100,999)),
-            'benefits_plan_{}.docx'.format(datetime.now().year),
-            'staff_records.db',
-            'payroll_batch_{}.dat'.format(random.randint(1000,9999))
-        ],
-        'it': [
-            'system_patch_{}.exe'.format(random.randint(1000,9999)),
-            'security_update_KB{}.msi'.format(random.randint(100000,999999)),
-            'backup_{}.tar.gz'.format(datetime.now().strftime('%Y%m%d')),
-            'config_{}.xml'.format(random.randint(100,999)),
-            'api_documentation_v{}.html'.format(random.randint(1,10))
-        ],
-        'operations': [
-            'customer_data_{}.encrypted'.format(random.randint(1000,9999)),
-            'risk_assessment_{}.xlsx'.format(datetime.now().strftime('%Y%m')),
-            'daily_transactions_{}.log'.format(datetime.now().strftime('%Y%m%d')),
-            'fraud_detection_rules.json',
-            'operations_manual_v{}.pdf'.format(random.randint(1,5))
-        ],
-        'legal': [
-            'contract_template_{}.docx'.format(random.randint(100,999)),
-            'compliance_report_{}.pdf'.format(datetime.now().year),
-            'case_files_{}.zip'.format(random.randint(1000,9999)),
-            'legal_guidelines_v{}.pdf'.format(random.randint(1,5)),
-            'regulatory_submission_{}.xml'.format(random.randint(1000,9999))
-        ]
-    }
-    
-    # Generate path components
-    root = random.choice(roots)
-    department = random.choice(list(departments.keys()))
-    subdepartment = random.choice(departments[department])
-    year = str(random.randint(2020, 2024))
-    month = f"{random.randint(1,12):02d}"
-    
-    extra_depth = [
-        f"version_{random.randint(1,5)}",
-        f"priority_{random.randint(1,3)}",
-        f"team_{random.randint(1,10)}",
-        f"project_{random.choice(['alpha','beta','gamma','delta'])}"
-    ]
-    
-    selected_extra_depth = random.sample(extra_depth, random.randint(0,2))
-    
-    # Build the path
-    path_components = [root, department, subdepartment, year, month] + selected_extra_depth
-    path = '/'.join(path_components)
-    
-    # Add file
-    file = random.choice(file_types[department])
-    
-    # Generate descriptions
-    folder_description = generate_folder_description(path_components)
-    file_description = generate_file_description(department, file)
-    
-    return f"{path}/{file}", folder_description, file_description
-
-def generate_user_data(num_records=5000):
+# Function to generate synthetic dataset
+def generate_synthetic_dataset_csv(filename, num_records=1000):
+    # Updated roles
     roles = ['sys_admin', 'software_dev', 'bank_manager', 'bank_clerk', 'consumer']
     
-    data = []
-    for i in range(num_records):
-        user_id = f"UID{random.randint(100000, 999999)}"
-        role = random.choice(roles)
-        file_path, folder_description, file_description = generate_complex_path()
-        
-        access_chance = {
-            'sys_admin': 0.95,
-            'software_dev': 0.8,
-            'bank_manager': 0.7,
-            'bank_clerk': 0.5,
-            'consumer': 0.2
-        }
-        
-        if any(sensitive in file_path.lower() for sensitive in ['security', 'audit', 'encrypted', 'compliance']):
-            access_chance = {k: v * 0.7 for k, v in access_chance.items()}
-        
-        access_granted = random.random() < access_chance[role]
-        
-        data.append([user_id, role, file_path, folder_description, file_description, access_granted])
-    
-    return data
+    # Predefined file paths
+    file_paths = [
+        '/cloud/finance/investments/2020/02/version_1/priority_1/transactions_95787.csv',
+        '/cloud/finance/budget/2021/03/version_2/priority_2/transactions_48291.csv',
+        '/cloud/finance/reports/2020/06/version_1/priority_3/audit_56734.csv',
+        '/cloud/operations/logistics/2022/01/version_1/priority_4/shipment_83473.csv',
+        '/cloud/finance/investments/2021/04/version_3/priority_1/transactions_45367.csv',
+        '/cloud/finance/reports/2021/02/version_2/priority_3/quarterly_83956.csv',
+        '/cloud/operations/logistics/2023/03/version_4/priority_2/shipment_47619.csv',
+        '/cloud/hr/employee_data/2020/12/version_2/priority_1/employees_19374.csv',
+        '/cloud/it/security/2021/05/version_1/priority_3/logs_38492.csv',
+        '/cloud/marketing/ad_campaigns/2021/11/version_5/priority_1/ad_data_75829.csv',
+        '/cloud/sales/transactions/2022/07/version_3/priority_2/sales_data_18265.csv',
+        '/cloud/finance/tax/2021/01/version_2/priority_4/tax_reports_23948.csv',
+        '/cloud/finance/budget/2022/09/version_3/priority_1/forecast_19384.csv',
+        '/cloud/operations/logistics/2022/11/version_2/priority_2/shipment_details_59203.csv',
+        '/cloud/hr/employee_data/2021/08/version_2/priority_1/employee_performance_98457.csv',
+        '/cloud/it/security/2022/04/version_2/priority_3/security_logs_38273.csv',
+        '/cloud/marketing/social_media/2023/09/version_4/priority_2/campaign_metrics_19283.csv',
+        '/cloud/sales/transactions/2023/06/version_2/priority_3/customer_purchases_83729.csv',
+        '/cloud/finance/forecasting/2022/12/version_1/priority_2/financial_forecast_72918.csv',
+        '/cloud/it/maintenance/2021/10/version_5/priority_4/system_logs_17293.csv',
+        '/cloud/operations/logistics/2021/05/version_2/priority_1/shipment_invoices_28374.csv',
+        '/cloud/finance/investments/2022/01/version_3/priority_1/investment_analysis_94827.csv',
+        '/cloud/hr/recruitment/2023/07/version_4/priority_2/job_applications_57392.csv',
+        '/cloud/it/deployment/2022/03/version_1/priority_1/deployment_logs_53982.csv',
+        '/cloud/marketing/analytics/2022/08/version_3/priority_2/customer_analysis_48192.csv',
+        '/cloud/sales/reports/2022/02/version_4/priority_1/sales_performance_73829.csv',
+        '/cloud/operations/logistics/2020/09/version_3/priority_2/delivery_schedule_29283.csv',
+        '/cloud/hr/employee_data/2022/04/version_2/priority_3/employee_salaries_98234.csv',
+        '/cloud/finance/budget/2023/03/version_1/priority_4/expense_report_49384.csv',
+        '/cloud/it/security/2022/02/version_4/priority_1/firewall_logs_59382.csv',
+        '/cloud/marketing/seo/2023/06/version_5/priority_2/website_traffic_58392.csv',
+        '/cloud/finance/reports/2023/05/version_3/priority_1/annual_report_84739.csv'
+    ]
 
-def save_to_csv(data, filename='user_access_data.csv'):
-    headers = ['User_ID', 'Role', 'File_Path', 'Folder_Description', 'File_Description', 'Access_Granted']
-    
-    with open(filename, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(headers)
-        writer.writerows(data)
+    # Create and write CSV data
+    with open(filename, mode='w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+        # Write header
+        header = [
+            "User_ID", "Role", "File_Path", "Behavior_Probability", "Access_Granted"
+        ]
+        writer.writerow(header)
 
-if __name__ == "__main__":
-    user_data = generate_user_data(50000)
-    save_to_csv(user_data)
-    print(f"Generated {len(user_data)} records of synthetic user access data")
+        # Generate data rows
+        for _ in range(num_records):
+            user_id = f"UID{random.randint(100000, 999999)}"
+            role = random.choice(roles)
+            file_path = random.choice(file_paths)
+            access_granted = random.choice([True, False])
+            
+            # Generate behavioral probability
+            behavior_probability = round(random.betavariate(2, 5), 2)
+            
+            # Write row to CSV
+            writer.writerow([
+                user_id, role, file_path, behavior_probability, access_granted
+            ])
+    
+    print(f"Synthetic dataset generated and saved to '{filename}'")
+
+# Example usage
+output_file = "synthetic_data.csv"
+generate_synthetic_dataset_csv(output_file, num_records=1000)
