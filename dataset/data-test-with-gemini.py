@@ -1,51 +1,118 @@
-'''working''' 
-import csv
-import requests
+import google.generativeai as genai
+import pandas as pd
+import json
+import time
+import random
+from google.api_core.exceptions import ResourceExhausted
 
-def validate_access_with_gemini_api(access_info):
-    """
-    Mock function to validate `Access_Granted` using Gemini API.
-    Replace this with the actual API endpoint and logic.
-    """
-    # Replace with actual Gemini API URL and headers if required
-    api_url = "https://gemini-api.example.com/validate-access"
-    response = requests.post(api_url, json=access_info)
-    if response.status_code == 200:
-        return response.json().get("is_access_granted", False)
-    else:
-        print(f"Error: Failed to validate access with status code {response.status_code}")
-        return False
+class BatchAccessAnalyzer:
+    def __init__(self, api_key: str, batch_size: int = 10):
+        # Initialize Gemini API
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel('gemini-pro')
+        self.batch_size = batch_size
 
-def process_csv(input_csv, output_csv):
-    """
-    Reads a CSV file line by line, validates Access_Granted, and writes updated rows to a new CSV.
-    """
-    with open(input_csv, mode='r') as infile, open(output_csv, mode='w', newline='') as outfile:
-        reader = csv.DictReader(infile)
-        fieldnames = reader.fieldnames
-        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+    def create_batch_prompt(self, batch_df: pd.DataFrame) -> str:
+        """Creates a prompt for a single batch of access data."""
+        data_lines = []
+        for idx, row in batch_df.iterrows():
+            entry = f"""
+            Entry {idx + 1}:
+            User: {row['User_ID']} (Role: {row['Role']})
+            File: {row['File_Path']}
+            Behavior Probability: {row['Behavior_Probability']}
+            Current Access: {row['Access_Granted']}
+            """
+            data_lines.append(entry)
+        
+        all_data = "\n".join(data_lines)
+        return f"""Analyze the following access entry and provide a security assessment in the following JSON format:
+        {{
+            "risk_level": "High/Medium/Low",
+            "security_concerns": "Brief description of security concerns",
+            "recommended_action": "Specific action to take (Grant/Revoke/Monitor)",
+            "justification": "Brief explanation of the recommendation"
+        }}
+        
+        Consider role-based access patterns, sensitive data handling, and potential security risks:
+        {all_data}
+        """
 
-        writer.writeheader()
-        for row in reader:
-            access_info = {
-                "User_ID": row["User_ID"],
-                "Role": row["Role"],
-                "File_Path": row["File_Path"],
-                "Access_Granted": row["Access_Granted"]
-            }
+    def process_batch(self, batch_df: pd.DataFrame, batch_num: int, max_retries=5) -> list:
+        """Process a single batch with retry logic and return structured data."""
+        prompt = self.create_batch_prompt(batch_df)
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.model.generate_content(prompt)
+                try:
+                    # Parse the JSON response
+                    analysis = json.loads(response.text)
+                    return analysis
+                except json.JSONDecodeError:
+                    print(f"Failed to parse JSON for batch {batch_num}. Using default values.")
+                    return {
+                        "risk_level": "Unknown",
+                        "security_concerns": "Analysis failed",
+                        "recommended_action": "Manual review required",
+                        "justification": "Failed to process automatically"
+                    }
+            except ResourceExhausted:
+                wait_time = 2 ** attempt + random.uniform(0, 1)
+                print(f"Quota exceeded for batch {batch_num}. Retrying in {wait_time:.2f} seconds...")
+                time.sleep(wait_time)
+        
+        return {
+            "risk_level": "Error",
+            "security_concerns": f"Failed to process batch {batch_num}",
+            "recommended_action": "Manual review required",
+            "justification": f"Failed after {max_retries} attempts"
+        }
 
-            # Validate access using Gemini API
-            is_access_granted = validate_access_with_gemini_api(access_info)
-
-            # Update row with validated access
-            row["Access_Granted"] = str(is_access_granted)
-
-            # Write updated row to output CSV
-            writer.writerow(row)
+    def analyze_access_data(self, csv_path: str):
+        """Analyzes access data in batches and saves results to a new CSV."""
+        # Read the CSV file
+        df = pd.read_csv(csv_path)
+        
+        # Add new columns for analysis results
+        df['Risk_Level'] = ""
+        df['Security_Concerns'] = ""
+        df['Recommended_Action'] = ""
+        df['Justification'] = ""
+        
+        # Calculate number of batches
+        num_batches = (len(df) + self.batch_size - 1) // self.batch_size
+        
+        # Process each batch
+        for i in range(num_batches):
+            start_idx = i * self.batch_size
+            end_idx = min((i + 1) * self.batch_size, len(df))
+            
+            print(f"Processing batch {i+1} of {num_batches}...")
+            
+            # Get the current batch
+            batch_df = df.iloc[start_idx:end_idx].copy()
+            batch_df.reset_index(drop=True, inplace=True)
+            
+            # Analyze batch
+            analysis = self.process_batch(batch_df, i+1)
+            
+            # Update the main dataframe with analysis results
+            df.loc[start_idx:end_idx-1, 'Risk_Level'] = analysis['risk_level']
+            df.loc[start_idx:end_idx-1, 'Security_Concerns'] = analysis['security_concerns']
+            df.loc[start_idx:end_idx-1, 'Recommended_Action'] = analysis['recommended_action']
+            df.loc[start_idx:end_idx-1, 'Justification'] = analysis['justification']
+            
+            # Add small delay between batches to avoid rate limiting
+            if i < num_batches - 1:
+                time.sleep(2)
+        
+        # Save the updated DataFrame to a new CSV
+        output_path = csv_path.replace('.csv', '_analyzed.csv')
+        df.to_csv(output_path, index=False)
+        print(f"Analysis completed. Results saved to {output_path}")
 
 if __name__ == "__main__":
-    input_csv_path = "dataset/user_access_data.csv"  # Input CSV file path
-    output_csv_path = "output.csv"  # Output CSV file path
-
-    process_csv(input_csv_path, output_csv_path)
-    print(f"Processing complete. Updated CSV saved to {output_csv_path}.")
+    api_key = "AIzaSyC6jA1ZAqvvUeby59CqtIJUZk148VZkMds"  # Replace with your actual API key
+    analyzer = BatchAccessAnalyzer(api_key, batch_size=10)
+    analyzer.analyze_access_data("user_access_data.csv")
