@@ -1,61 +1,66 @@
-import csv
-import requests
+import google.generativeai as genai
+import pandas as pd
+import json
 
-def validate_access_with_gemini_api(access_info, api_key):
-    """
-    Function to validate `Access_Granted` using Google Gemini API with API key.
-    """
-    # Replace with actual Gemini API URL
-    api_url = "https://gemini-api.example.com/validate-access"
-    
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+class AccessAnalyzer:
+    def __init__(self, api_key: str):
+        # Initialize Gemini API
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel('gemini-pro')
+        
+    def create_batch_prompt(self, df: pd.DataFrame) -> str:
+        """Creates a single prompt with all access data for analysis."""
+        
+        # Convert DataFrame to formatted string
+        data_lines = []
+        for _, row in df.iterrows():
+            entry = f"""
+            Entry {_+1}:
+            User: {row['User_ID']} (Role: {row['Role']})
+            File: {row['File_Path']}
+            Context: {row['Folder_Description']}
+            Description: {row['File_Description']}
+            Current Access: {row['Access_Granted']}
+            """
+            data_lines.append(entry)
+            
+        all_data = "\n".join(data_lines)
+        
+        return f"""Analyze the following batch of access permissions and provide a comprehensive security assessment. 
+        Consider role-based access patterns, sensitive data handling, and potential security risks:
 
-    response = requests.post(api_url, json=access_info, headers=headers)
-    if response.status_code == 200:
-        return response.json().get("is_access_granted", False)
-    else:
-        print(f"Error: Failed to validate access with status code {response.status_code}")
-        return False
+        {all_data}
 
-def process_csv(input_csv, output_csv, api_key):
-    """
-    Reads a CSV file line by line, validates Access_Granted, and writes updated rows to a new CSV.
-    """
-    with open(input_csv, mode='r') as infile, open(output_csv, mode='w', newline='') as outfile:
-        reader = csv.DictReader(infile)
-        fieldnames = reader.fieldnames
-        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        Provide your analysis with:
+        1. Overall security assessment
+        2. Patterns in access permissions
+        3. Potential security concerns
+        4. Recommendations for access control improvements
+        """
 
-        writer.writeheader()
-        for row in reader:
-            access_info = {
-                "User_ID": row["User_ID"],
-                "Role": row["Role"],
-                "File_Path": row["File_Path"],
-                "Access_Granted": row["Access_Granted"]
-            }
-
-            # Validate access using Google Gemini API
-            is_access_granted = validate_access_with_gemini_api(access_info, api_key)
-
-            # Update row with validated access
-            row["Access_Granted"] = str(is_access_granted)
-
-            # Write updated row to output CSV
-            writer.writerow(row)
+    def analyze_access_data(self, csv_path: str):
+        """Analyzes all access data in batch."""
+        # Read CSV file
+        df = pd.read_csv(csv_path)
+        
+        # Generate batch prompt
+        prompt = self.create_batch_prompt(df)
+        
+        # Get response from Gemini
+        response = self.model.generate_content(prompt)
+        
+        # Save response to file
+        with open("batch_analysis_report.txt", 'w') as f:
+            f.write("Access Permissions Batch Analysis Report\n")
+            f.write("=====================================\n\n")
+            f.write(response.text)
+        
+        print("Analysis completed. Check 'batch_analysis_report.txt' for the report.")
 
 if __name__ == "__main__":
-    input_csv_path = "./user_access_data.csv"  # Input CSV file path
-    output_csv_path = "output.csv"  # Output CSV file path
-    api_key = "AIzaSyC6jA1ZAqvvUeby59CqtIJUZk148VZkMds"  # Replace with your Google Gemini API key
-    import os
-    if not os.path.exists(input_csv_path):
-        print(f"Error: The file '{input_csv_path}' does not exist.")
-    else:
-        process_csv(input_csv_path, output_csv_path, api_key)
-
-    process_csv(input_csv_path, output_csv_path, api_key)
-    print(f"Processing complete. Updated CSV saved to {output_csv_path}.")
+    # Initialize analyzer with your API key
+    api_key = "AIzaSyC6jA1ZAqvvUeby59CqtIJUZk148VZkMds"
+    analyzer = AccessAnalyzer(api_key)
+    
+    # Analyze access permissions
+    analyzer.analyze_access_data("user_access_data.csv")
